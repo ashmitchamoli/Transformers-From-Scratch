@@ -1,5 +1,5 @@
 import torch
-from torch import Tensor
+from torch import Tensor, inf as infinity
 from torch.nn import Module, Transformer
 from typing import Literal
 
@@ -34,6 +34,16 @@ class Transformer(Module):
 		self.decoder = Decoder(decoderLayer, nDecoderLayers)
 
 	def forward(self, src : Tensor, tgt) -> Tensor:
+		"""
+		:param src: (batch, seqLen, dModel)
+		:param tgt: (batch, seqLen, dModel)
+		Both src and tgt have shape (batch, seqLen, dModel)
+
+		:return: (batch, seqLen, dModel)
+		"""
 		encoderOutput = self.encoder.forward(src)
-		decoderOutput = self.decoder.forward(tgt, encoderOutput, encoderOutput)
+
+		seqLen = tgt.size(1)
+		causalMask = torch.triu(torch.ones(seqLen, seqLen) * -infinity, diagonal=1) # causal mask for decoder
+		decoderOutput = self.decoder.forward(tgt, encoderOutput, encoderOutput, causalMask)
 		return decoderOutput

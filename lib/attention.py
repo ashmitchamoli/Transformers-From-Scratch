@@ -43,7 +43,7 @@ class MultiHeadAttention(Module):
 
 		attentionWeights = matmul(q, k.transpose(2, 3)) / self.headSize**0.5 # (batchSize, nHeads, seqLen, seqLen)
 		if mask is not None:
-			attentionWeights = attentionWeights * mask
+			attentionWeights = attentionWeights + mask
 		attentionWeights = self.attentionSoftmax(attentionWeights) # (batchSize, nHeads, seqLen, seqLen)
 
 		finalOut = attentionWeights * v # (batchSize, nHeads, seqLen, headSize)
