@@ -3,15 +3,14 @@ from lib.utils import Tokenizer
 from bidict import bidict
 
 tokenizer = Tokenizer()
+trainTokensEn, vocabularyEn = tokenizer.getTokens(filepath="data/ted-talks-corpus/train.en", language="english")
+testTokensEn, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/test.en", language="english")
+devTokensEn, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/dev.en", language="english")
 
-trainTokensEn, vocabularyEn = tokenizer.getTokens(filepath="data/ted-talks-corpus/train.en")
-testTokensEn, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/test.en")
-devTokensEn, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/dev.en")
-
-tokenizer.vocabulary = bidict()
-trainTokensFr, vocabularyFr = tokenizer.getTokens(filepath="data/ted-talks-corpus/train.fr")
-testTokensFr, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/test.fr")
-devTokensFr, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/dev.fr")
+tokenizer = Tokenizer()
+trainTokensFr, vocabularyFr = tokenizer.getTokens(filepath="data/ted-talks-corpus/train.fr", language="french")
+testTokensFr, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/test.fr", language="french")
+devTokensFr, _ = tokenizer.getTokens(filepath="data/ted-talks-corpus/dev.fr", language="french")
 
 train_split = (trainTokensEn, trainTokensFr)
 dev_split = (devTokensEn, devTokensFr)

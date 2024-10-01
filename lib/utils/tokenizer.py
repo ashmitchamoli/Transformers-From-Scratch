@@ -1,6 +1,7 @@
 import nltk
 from bidict import bidict
 from itertools import chain
+from typing import Literal
 
 from lib.config import PAD_TOKEN, UNK_TOKEN, EOS_TOKEN, SOS_TOKEN
 
@@ -19,7 +20,7 @@ class Tokenizer:
 			self.vocabulary[word] = self.vocabSize
 			self.vocabSize += 1
 
-	def getTokens(self, putEos : bool = True, filepath : str = "") -> tuple[list[list[str]], bidict]:
+	def getTokens(self, language : Literal["english", "french"], putEos : bool = True, filepath : str = "") -> tuple[list[list[str]], bidict]:
 		"""
 			:param replaceUnk: if true, replaces all infrequent words with UNK_TOKEN
 
@@ -28,9 +29,9 @@ class Tokenizer:
 		# self.vocabulary = bidict()
 		text = self.readText(filepath)
 
-		sentences = nltk.sent_tokenize(text)
+		sentences = nltk.sent_tokenize(text, language=language)
 		tokens = [([SOS_TOKEN] if putEos else []) + 
-				  nltk.word_tokenize(sentence) + 
+				  nltk.word_tokenize(sentence, language=language) + 
 				  ([EOS_TOKEN] if putEos else []) for sentence in sentences]
 
 		uniqueWords = set(list(chain(*tokens)))
