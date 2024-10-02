@@ -1,7 +1,8 @@
+import os
 import torch
 from torch import Tensor, inf as infinity
 from torch.nn import Module, Linear, Softmax, Sequential, Tanh, Embedding
-from typing import Literal
+from typing import Literal, Optional
 from alive_progress import alive_bar as aliveBar
 from bidict import bidict
 
@@ -17,7 +18,7 @@ class Transformer(Module):
 				 nHeads : int = 8,
 				 nEncoderLayers : int = 6,
 				 nDecoderLayers : int = 6,
-				 activation : Literal["relu", "gelu", "tanh"] = "relu",
+				 activation : Literal["relu", "gelu", "tanh", "elu"] = "relu",
 				 dropout : float = 0.1,
 				 dimFeedforward : int = 2048,
 				 normFirst : bool = False,
@@ -50,11 +51,16 @@ class Transformer(Module):
 		self.classifier = Sequential()
 		for i in range(len(classifierLayers) - 1):
 			self.classifier.append(Linear(classifierLayers[i], classifierLayers[i + 1]))
-			self.classifier.append(Tanh())
+			# self.classifier.append(Tanh())
 
 		self.softmax = Softmax(dim=-1)
 
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+		self._modelSaveDir_ = "transformer_ckpt"
+		self._modelName_ = f"{self.dModel}_{self.nHeads}_{self.nEncoderLayers}_{self.nDecoderLayers}_{self.activation}_{self.dropout}_{self.dimFeedforward}_{self.normFirst}_{classifierLayers}"
+		self._savePath_ = os.path.join(self._modelSaveDir_, self._modelName_ + ".pth")
+		print(f"Model will be saved to {self._savePath_}.")
 
 	def _getPositionalEncoding_(self, maxSequenceLength : int, embeddingSize : int, device : torch.device) -> torch.Tensor:
 		pe = torch.arange(0, maxSequenceLength, device=device).unsqueeze(1) # (maxSequenceLength, 1)
@@ -76,12 +82,12 @@ class Transformer(Module):
 		src = self.embeddingsSrc(src) + self._getPositionalEncoding_(src.size(1), self.dModel, self.device) # (batch, seqLen, dModel)
 		tgt = self.embeddingsTgt(tgt) + self._getPositionalEncoding_(tgt.size(1), self.dModel, self.device) # (batch, seqLen, dModel)
 
-		encoderOutput = self.encoder.forward(src) # (batch, seqLen, dModel)
+		x = self.encoder.forward(src) # (batch, seqLen, dModel)
 
 		seqLen = tgt.size(1)
 		causalMask = torch.triu(torch.ones(seqLen, seqLen) * -infinity, diagonal=1).to(self.device) # causal mask for decoder
-		decoderOutput = self.decoder.forward(tgt, encoderOutput, encoderOutput, causalMask) # (batch, seqLen, dModel)
-		return decoderOutput
+		x = self.decoder.forward(tgt, x, x, causalMask) # (batch, seqLen, dModel)
+		return x
 	
 	def forward(self, src : Tensor, tgt) -> Tensor:
 		"""
@@ -121,7 +127,7 @@ class Transformer(Module):
 					bar()
 
 			with aliveBar(len(valLoader)) as bar:
-				totalLoss = 0
+				totalValLoss = 0
 				for i, (src, tgt) in enumerate(valLoader):
 					src = src.to(self.device)
 					tgt = tgt.to(self.device)
@@ -129,8 +135,33 @@ class Transformer(Module):
 					output = self.forward(src[:, :-1], tgt[:, :-1]).view(-1, len(self.vocabularyTgt)) # (batch * (seqLen-1), vocabSize)
 
 					loss = criterion(output, tgt[:, 1:].reshape(-1))
-					totalLoss += loss.item()
-					bar.text(f"Total Loss: {totalLoss / (i + 1) :.3f}")
+					totalValLoss += loss.item()
+					bar.text(f"Total Loss: {totalValLoss / (i + 1) :.3f}")
 					bar()
 			
-			print(f"Epoch {epoch}/{epochs} | Train Loss: {totalLoss / len(valLoader) :.3f} | Val Loss: {totalLoss / len(valLoader) :.3f}")
+			print(f"Epoch {epoch+1}/{epochs} | Train Loss: {totalLoss / len(trainLoader) :.3f} | Val Loss: {totalValLoss / len(valLoader) :.3f}")
+		
+		self._saveModel_(self._savePath_)
+		
+	def _saveModel_(self, path : str) -> None:
+		if not os.path.exists(os.path.dirname(path)):
+			os.makedirs(os.path.dirname(path))
+		torch.save(self.state_dict(), path)
+	
+	def _loadModel_(self, path : str) -> bool:
+		if os.path.exists(path):
+			self.load_state_dict(torch.load(path, weights_only=True))
+			return True
+		else:
+			return False
+
+	def loadModelWeights(self, searchPath : Optional[str] = None) -> None:
+		searchDir = None
+		if searchPath is not None:
+			searchDir = os.path.join(searchPath, self._modelSaveDir_)
+		else:
+			searchDir = self._modelSaveDir_
+		if self._loadModel_(os.path.join(searchDir, self._modelName_ + '.pth')):
+			print(f"Loaded model from {os.path.join(searchDir, self._modelName_ + '.pth')}")
+		else:
+			print("Model checkpoint not found. Train the model from scratch.")

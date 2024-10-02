@@ -6,20 +6,20 @@ from lib.transformer import Transformer
 
 hyperparameters = {
     "dModel" : 512,
-    "nHeads" : 4,
-    "nEncoderLayers" : 3,
-    "nDecoderLayers" : 3,
+    "nHeads" : 8,
+    "nEncoderLayers" : 6,
+    "nDecoderLayers" : 6,
     "activation" : "gelu",
-    "dropout" : 0.2,
+    "dropout" : 0.1,
     "dimFeedforward" : 1024,
     "normFirst" : False,
-    "classifierLayers" : [1024]
+    "classifierLayers" : []
 }
 
 trainingConfig = {
 	"batchSize" : 4,
-	"learningRate" : 0.001,
-	"numEpochs" : 3
+	"learningRate" : 1e-4,
+	"numEpochs" : 4
 }
 
 vocabularyEn = pickle.load(open("data/vocabularyEn.pkl", "rb"))

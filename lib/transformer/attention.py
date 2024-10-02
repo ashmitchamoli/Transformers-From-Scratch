@@ -39,16 +39,16 @@ class MultiHeadAttention(Module):
 		v = self.Wv(v) # (batchSize, seqLen, dModel)
 
 		# divide into nHeads
-		q = q.view(batchSize, self.nHeads, seqLen, self.headSize)
-		k = k.view(batchSize, self.nHeads, seqLen, self.headSize)
-		v = v.view(batchSize, self.nHeads, seqLen, self.headSize)
+		q = q.view(batchSize, seqLen, self.nHeads, self.headSize).transpose(1, 2)
+		k = k.view(batchSize, seqLen, self.nHeads, self.headSize).transpose(1, 2)
+		v = v.view(batchSize, seqLen, self.nHeads, self.headSize).transpose(1, 2)
 
-		attentionWeights = matmul(q, k.transpose(2, 3)) / self.headSize**0.5 # (batchSize, nHeads, seqLen, seqLen)
+		x = matmul(q, k.transpose(-2, -1)) / self.headSize**0.5 # (batchSize, nHeads, seqLen, seqLen)
 		if mask is not None:
-			attentionWeights = attentionWeights + mask
-		attentionWeights = self.attentionSoftmax(attentionWeights) # (batchSize, nHeads, seqLen, seqLen)
+			x = x + mask
+		x = self.attentionSoftmax(x) # (batchSize, nHeads, seqLen, seqLen)
 
-		finalOut = matmul(attentionWeights, v) # (batchSize, nHeads, seqLen, headSize)
-		finalOut = finalOut.view(batchSize, seqLen, self.dModel)
+		x = matmul(x, v) # (batchSize, nHeads, seqLen, headSize)
+		x = x.transpose(1, 2).contiguous().view(batchSize, seqLen, self.dModel)
 
-		return finalOut
+		return x

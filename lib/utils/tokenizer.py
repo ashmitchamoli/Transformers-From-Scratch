@@ -29,7 +29,8 @@ class Tokenizer:
 		# self.vocabulary = bidict()
 		text = self.readText(filepath)
 
-		sentences = nltk.sent_tokenize(text, language=language)
+		# sentences = nltk.sent_tokenize(text, language=language)
+		sentences = text.split("\n")
 		tokens = [([SOS_TOKEN] if putEos else []) + 
 				  nltk.word_tokenize(sentence, language=language) + 
 				  ([EOS_TOKEN] if putEos else []) for sentence in sentences]
