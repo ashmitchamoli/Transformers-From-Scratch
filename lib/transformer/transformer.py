@@ -1,7 +1,7 @@
 import os
 import torch
 from torch import Tensor, inf as infinity
-from torch.nn import Module, Linear, Softmax, Sequential, Tanh, Embedding
+from torch.nn import Module, Linear, Softmax, Sequential, Embedding
 from typing import Literal, Optional
 from alive_progress import alive_bar as aliveBar
 from bidict import bidict
@@ -103,7 +103,7 @@ class Transformer(Module):
 				   valLoader : torch.utils.data.DataLoader,
 				   learningRate : float = 1e-3,
 				   epochs : int = 1) -> None:
-		
+
 		optimizer = torch.optim.Adam(self.parameters(), lr=learningRate)
 		criterion = torch.nn.CrossEntropyLoss(ignore_index=self.vocabularyTgt[PAD_TOKEN])
 
@@ -125,24 +125,33 @@ class Transformer(Module):
 					totalLoss += loss.item()
 					bar.text(f"Total Loss: {totalLoss / (i + 1) :.3f}")
 					bar()
-
+			
+			# validation
 			with aliveBar(len(valLoader)) as bar:
 				totalValLoss = 0
+				totalCorrect = 0
+				totalValues = 0
 				for i, (src, tgt) in enumerate(valLoader):
 					src = src.to(self.device)
 					tgt = tgt.to(self.device)
+					y = tgt[:, 1:].reshape(-1)
 
 					output = self.forward(src[:, :-1], tgt[:, :-1]).view(-1, len(self.vocabularyTgt)) # (batch * (seqLen-1), vocabSize)
 
-					loss = criterion(output, tgt[:, 1:].reshape(-1))
+					loss = criterion(output, y)
 					totalValLoss += loss.item()
+					padIndices = y == self.vocabularyTgt[PAD_TOKEN]
+					output = output[~padIndices]
+					y = y[~padIndices]
+					totalCorrect += (output.argmax(dim=1) == y).sum().item()
+					totalValues += y.size(0)
 					bar.text(f"Total Loss: {totalValLoss / (i + 1) :.3f}")
 					bar()
-			
-			print(f"Epoch {epoch+1}/{epochs} | Train Loss: {totalLoss / len(trainLoader) :.3f} | Val Loss: {totalValLoss / len(valLoader) :.3f}")
-		
+
+			print(f"Epoch {epoch+1}/{epochs} | Train Loss: {totalLoss / len(trainLoader) :.3f} | Val Loss: {totalValLoss / len(valLoader) :.3f} | Accuracy: {100 * totalCorrect / totalValues :.3f}%")
+
 		self._saveModel_(self._savePath_)
-		
+
 	def _saveModel_(self, path : str) -> None:
 		if not os.path.exists(os.path.dirname(path)):
 			os.makedirs(os.path.dirname(path))

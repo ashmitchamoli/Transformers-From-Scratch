@@ -5,13 +5,13 @@ from lib.utils import TranslationDataset
 from lib.transformer import Transformer
 
 hyperparameters = {
-    "dModel" : 512,
-    "nHeads" : 8,
-    "nEncoderLayers" : 6,
-    "nDecoderLayers" : 6,
-    "activation" : "gelu",
-    "dropout" : 0.1,
-    "dimFeedforward" : 1024,
+    "dModel" : 64,
+    "nHeads" : 1,
+    "nEncoderLayers" : 1,
+    "nDecoderLayers" : 1,
+    "activation" : "relu",
+    "dropout" : 0.3,
+    "dimFeedforward" : 256,
     "normFirst" : False,
     "classifierLayers" : []
 }
@@ -19,7 +19,7 @@ hyperparameters = {
 trainingConfig = {
 	"batchSize" : 4,
 	"learningRate" : 1e-4,
-	"numEpochs" : 4
+	"numEpochs" : 1
 }
 
 vocabularyEn = pickle.load(open("data/vocabularyEn.pkl", "rb"))
@@ -38,7 +38,7 @@ valLoader = torch.utils.data.DataLoader(valDataset, batch_size=trainingConfig["b
 model = Transformer(vocabularyTgt=vocabularyFr,
 					vocabularySrc=vocabularyEn,
 					**hyperparameters)
-
+model.loadModelWeights()
 model.trainModel(trainLoader,
 				 valLoader,
 				 trainingConfig["learningRate"],

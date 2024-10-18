@@ -1,6 +1,6 @@
 import copy
 from torch import Tensor
-from torch.nn import Module, LayerNorm, Dropout, Linear, ReLU, GELU, Tanh, ModuleList, Sequential
+from torch.nn import Module, LayerNorm, Dropout, Linear, ReLU, GELU, Tanh, ModuleList
 from typing import Optional, Literal
 
 from lib.transformer.attention import MultiHeadAttention
